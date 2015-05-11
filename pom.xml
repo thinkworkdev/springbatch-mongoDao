@@ -4,7 +4,7 @@
 	<groupId>org.springframework.batch.mongodb</groupId>
 	<artifactId>Spring-MongoDao</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.0-tw-SNAPSHOT</version>
 	<name>Spring-Mongo</name>
 
 	<properties>
@@ -12,7 +12,7 @@
 		<spring.version>4.1.0.RELEASE</spring.version>
 		<spring.batch.version>3.0.1.RELEASE</spring.batch.version>
 		<spring.data.version>1.2.1.RELEASE</spring.data.version>
-		<mongodb.driver.version>2.11.2</mongodb.driver.version>		
+		<mongodb.driver.version>2.12.1</mongodb.driver.version>		
 	</properties>
 
 	<dependencies>

@@ -180,8 +180,10 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
 				jobInstanceIdObj(-1L)));
 		for (JobInstance instanceEntry : jobInstances) {
 			String key = instanceEntry.getJobName();
-			String curJobName = key.substring(0, key.lastIndexOf("|"));
-
+			String curJobName = key;
+			if (key.lastIndexOf("|") > 0) {
+			    curJobName = key.substring(0, key.lastIndexOf("|"));
+			}
 			if(curJobName.equals(jobName)) {
 				result.add(instanceEntry);
 			}
@@ -198,7 +200,10 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
 				jobInstanceIdObj(-1L)));
 		for (JobInstance instanceEntry : jobInstances) {
 			String key = instanceEntry.getJobName();
-			String curJobName = key.substring(0, key.lastIndexOf("|"));
+			String curJobName = key;
+            if (key.lastIndexOf("|") > 0) {
+                curJobName = key.substring(0, key.lastIndexOf("|"));
+            }
 
 			if(curJobName.equals(jobName)) {
 				count++;
