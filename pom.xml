@@ -2,10 +2,10 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.springframework.batch.mongodb</groupId>
-	<artifactId>Spring-MongoDao</artifactId>
+	<artifactId>spring-mongodao</artifactId>
 	<packaging>jar</packaging>
 	<version>1.0-tw-SNAPSHOT</version>
-	<name>Spring-Mongo</name>
+	<name>spring-mongodao</name>
 
 	<properties>
 		<jdk.version>1.6</jdk.version>
