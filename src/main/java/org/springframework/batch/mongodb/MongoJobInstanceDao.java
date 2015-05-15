@@ -176,7 +176,7 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
 			int count) {
 		List<JobInstance> result = new ArrayList<JobInstance>();
 		List<JobInstance> jobInstances = mapJobInstances(getCollection().find(
-				new BasicDBObject(JOB_NAME_KEY, jobName)).sort(
+				new BasicDBObject(JOB_NAME_KEY, jobName)).limit(count).sort(
 				jobInstanceIdObj(-1L)));
 		for (JobInstance instanceEntry : jobInstances) {
 			String key = instanceEntry.getJobName();
