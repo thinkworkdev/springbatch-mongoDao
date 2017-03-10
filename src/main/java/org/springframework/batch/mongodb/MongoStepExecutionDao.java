@@ -48,7 +48,7 @@ public class MongoStepExecutionDao extends AbstractMongoDao implements StepExecu
 
 	@PostConstruct
     public void init() {
-        getCollection().ensureIndex(BasicDBObjectBuilder.start().add(STEP_EXECUTION_ID_KEY, 1).add(JOB_EXECUTION_ID_KEY, 1).get());
+        getCollection().createIndex(BasicDBObjectBuilder.start().add(STEP_EXECUTION_ID_KEY, 1).add(JOB_EXECUTION_ID_KEY, 1).get());
 
     }
 
@@ -102,18 +102,18 @@ public class MongoStepExecutionDao extends AbstractMongoDao implements StepExecu
                 object);
 
         // Avoid concurrent modifications...
-        DBObject lastError = mongoTemplate.getDb().getLastError();
-        if (!((Boolean) lastError.get(UPDATED_EXISTING_STATUS))) {
-            LOG.error("Update returned status {}", lastError);
-            DBObject existingStepExecution = getCollection().findOne(stepExecutionIdObj(stepExecution.getId()), new BasicDBObject(VERSION_KEY, 1));
-            if (existingStepExecution == null) {
-                throw new IllegalArgumentException("Can't update this stepExecution, it was never saved.");
-            }
-            Integer curentVersion = ((Integer) existingStepExecution.get(VERSION_KEY));
-            throw new OptimisticLockingFailureException("Attempt to update job execution id="
-                    + stepExecution.getId() + " with wrong version (" + currentVersion
-                    + "), where current version is " + curentVersion);
-        }
+//        DBObject lastError = mongoTemplate.getDb().getLastError();
+//        if (!((Boolean) lastError.get(UPDATED_EXISTING_STATUS))) {
+//            LOG.error("Update returned status {}", lastError);
+//            DBObject existingStepExecution = getCollection().findOne(stepExecutionIdObj(stepExecution.getId()), new BasicDBObject(VERSION_KEY, 1));
+//            if (existingStepExecution == null) {
+//                throw new IllegalArgumentException("Can't update this stepExecution, it was never saved.");
+//            }
+//            Integer curentVersion = ((Integer) existingStepExecution.get(VERSION_KEY));
+//            throw new OptimisticLockingFailureException("Attempt to update job execution id="
+//                    + stepExecution.getId() + " with wrong version (" + currentVersion
+//                    + "), where current version is " + curentVersion);
+//        }
 
         stepExecution.incrementVersion();
     }

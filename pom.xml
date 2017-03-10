@@ -4,15 +4,15 @@
 	<groupId>org.springframework.batch.mongodb</groupId>
 	<artifactId>spring-mongodao</artifactId>
 	<packaging>jar</packaging>
-	<version>1.0-tw-SNAPSHOT</version>
+	<version>1.5-tw-SNAPSHOT</version>
 	<name>spring-mongodao</name>
 
 	<properties>
-		<jdk.version>1.6</jdk.version>
-		<spring.version>4.1.0.RELEASE</spring.version>
-		<spring.batch.version>3.0.1.RELEASE</spring.batch.version>
-		<spring.data.version>1.2.1.RELEASE</spring.data.version>
-		<mongodb.driver.version>2.12.1</mongodb.driver.version>
+		<jdk.version>1.8</jdk.version>
+		<spring.version>4.3.6.RELEASE</spring.version>
+		<spring.batch.version>3.0.7.RELEASE</spring.batch.version>
+		<spring.data.version>1.9.7.RELEASE</spring.data.version>
+		<mongodb.driver.version>3.4.1</mongodb.driver.version>
 	</properties>
 
 	<dependencies>

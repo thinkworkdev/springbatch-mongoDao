@@ -55,7 +55,7 @@ public class MongoJobExecutionDao extends AbstractMongoDao implements
 
 	@PostConstruct
 	public void init() {
-		getCollection().ensureIndex(
+		getCollection().createIndex(
 				BasicDBObjectBuilder.start().add(JOB_EXECUTION_ID_KEY, 1)
 						.add(JOB_INSTANCE_ID_KEY, 1).get());
 	}
@@ -126,24 +126,24 @@ public class MongoJobExecutionDao extends AbstractMongoDao implements
 				object);
 
 		// Avoid concurrent modifications...
-		DBObject lastError = mongoTemplate.getDb().getLastError();
-		if (!((Boolean) lastError.get(UPDATED_EXISTING_STATUS))) {
-			LOG.error("Update returned status {}", lastError);
-			DBObject existingJobExecution = getCollection().findOne(
-					jobExecutionIdObj(jobExecutionId),
-					new BasicDBObject(VERSION_KEY, 1));
-			if (existingJobExecution == null) {
-				throw new IllegalArgumentException(
-						"Can't update this jobExecution, it was never saved.");
-			}
-			Integer curentVersion = ((Integer) existingJobExecution
-					.get(VERSION_KEY));
-			throw new OptimisticLockingFailureException(
-					"Attempt to update job execution id=" + jobExecutionId
-							+ " with wrong version ("
-							+ jobExecution.getVersion()
-							+ "), where current version is " + curentVersion);
-		}
+//		DBObject lastError = mongoTemplate.getDb().getLastError();
+//		if (!((Boolean) lastError.get(UPDATED_EXISTING_STATUS))) {
+//			LOG.error("Update returned status {}", lastError);
+//			DBObject existingJobExecution = getCollection().findOne(
+//					jobExecutionIdObj(jobExecutionId),
+//					new BasicDBObject(VERSION_KEY, 1));
+//			if (existingJobExecution == null) {
+//				throw new IllegalArgumentException(
+//						"Can't update this jobExecution, it was never saved.");
+//			}
+//			Integer curentVersion = ((Integer) existingJobExecution
+//					.get(VERSION_KEY));
+//			throw new OptimisticLockingFailureException(
+//					"Attempt to update job execution id=" + jobExecutionId
+//							+ " with wrong version ("
+//							+ jobExecution.getVersion()
+//							+ "), where current version is " + curentVersion);
+//		}
 
 		jobExecution.incrementVersion();
 	}

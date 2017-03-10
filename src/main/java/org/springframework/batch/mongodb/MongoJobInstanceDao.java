@@ -49,7 +49,7 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
 	 
     @PostConstruct
     public void init() {
-        getCollection().ensureIndex(jobInstanceIdObj(1L));
+        getCollection().createIndex(jobInstanceIdObj(1L));
     }
 
     public JobInstance createJobInstance(String jobName, final JobParameters jobParameters) {
