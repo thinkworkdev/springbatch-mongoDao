@@ -49,6 +49,8 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
 	 
     @PostConstruct
     public void init() {
+        // db.JobInstance.createIndex( {jobName : -1});
+        getCollection().createIndex(new BasicDBObject(JOB_NAME_KEY, -1L));
         getCollection().createIndex(jobInstanceIdObj(1L));
     }
 

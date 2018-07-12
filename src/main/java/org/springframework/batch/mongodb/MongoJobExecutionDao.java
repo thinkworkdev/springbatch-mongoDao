@@ -20,7 +20,6 @@ import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.JobParameters;
 import org.springframework.batch.core.repository.dao.JobExecutionDao;
 import org.springframework.batch.core.repository.dao.NoSuchObjectException;
-import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.Assert;
@@ -55,6 +54,12 @@ public class MongoJobExecutionDao extends AbstractMongoDao implements
 
 	@PostConstruct
 	public void init() {
+	    // db.JobExecution.createIndex( {jobInstanceId : 1});
+        getCollection().createIndex(jobInstanceIdObj(1L));
+        // db.JobExecution.createIndex( {jobExecutionId : 1});
+        getCollection().createIndex(jobExecutionIdObj(1L));
+        // db.JobExecution.createIndex( {createTime : -1});
+        getCollection().createIndex(new BasicDBObject(CREATE_TIME_KEY, -1));
 		getCollection().createIndex(
 				BasicDBObjectBuilder.start().add(JOB_EXECUTION_ID_KEY, 1)
 						.add(JOB_INSTANCE_ID_KEY, 1).get());

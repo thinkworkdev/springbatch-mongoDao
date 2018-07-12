@@ -49,6 +49,8 @@ public class MongoExecutionContextDao extends AbstractMongoDao implements
 
 	@PostConstruct
 	public void init() {
+	    // db.ExecutionContext.createIndex( {jobExecutionId : 1});
+	    getCollection().createIndex(jobExecutionIdObj(1L));
 		getCollection().createIndex(
 				BasicDBObjectBuilder.start().add(STEP_EXECUTION_ID_KEY, 1)
 						.add(JOB_EXECUTION_ID_KEY, 1).get());
