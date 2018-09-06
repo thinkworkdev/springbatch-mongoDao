@@ -112,7 +112,7 @@
 			<uniqueVersion>true</uniqueVersion>
 			<id>thinkwork-snapshot</id>
 			<name>Thinkwork Snapshots</name>
-			<url>http://ec2-54-164-183-202.compute-1.amazonaws.com:8081/nexus/content/repositories/snapshots/</url>
+			<url>http://54.163.134.102:8081/nexus/content/repositories/snapshots/</url>
 		</snapshotRepository>
 	</distributionManagement>
 
