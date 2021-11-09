@@ -16,13 +16,25 @@
 
 package org.springframework.batch.mongodb.test;
 
-import com.mongodb.BasicDBObject;
-import com.mongodb.DBCursor;
-import com.mongodb.DBObject;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.combine;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
+import java.util.Date;
+import java.util.List;
+
+import org.bson.Document;
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.batch.core.*;
+import org.springframework.batch.core.BatchStatus;
+import org.springframework.batch.core.ExitStatus;
+import org.springframework.batch.core.JobExecution;
+import org.springframework.batch.core.JobInstance;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
 import org.springframework.batch.core.repository.dao.JobExecutionDao;
 import org.springframework.batch.core.repository.dao.JobInstanceDao;
 import org.springframework.batch.core.repository.dao.NoSuchObjectException;
@@ -32,10 +44,10 @@ import org.springframework.batch.mongodb.MongoJobInstanceDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
-import java.util.Date;
-import java.util.List;
-
-import static org.junit.Assert.*;
+import com.mongodb.BasicDBObject;
+import com.mongodb.DBObject;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoCursor;
 
 /**
  * @author vfouzdar
@@ -43,298 +55,265 @@ import static org.junit.Assert.*;
  */
 public abstract class AbstractJobDaoTests {
 
-	protected JobInstanceDao jobInstanceDao;
+    protected JobInstanceDao  jobInstanceDao;
 
-	protected JobExecutionDao jobExecutionDao;
+    protected JobExecutionDao jobExecutionDao;
 
-	protected JobParameters jobParameters = new JobParametersBuilder()
-			.addString("job.key", "jobKey").addLong("long", (long) 1)
-			.addDate("date", new Date(7)).addDouble("double", 7.7)
-			.toJobParameters();
+    protected JobParameters   jobParameters         = new JobParametersBuilder().addString("job.key", "jobKey")
+            .addLong("long", (long) 1).addDate("date", new Date(7)).addDouble("double", 7.7).toJobParameters();
 
-	protected JobInstance jobInstance;
+    protected JobInstance     jobInstance;
 
-	protected String jobName = "Job1";
+    protected String          jobName               = "Job1";
 
-	protected JobExecution jobExecution;
+    protected JobExecution    jobExecution;
 
-	protected Date jobExecutionStartTime = new Date(System.currentTimeMillis());
+    protected Date            jobExecutionStartTime = new Date(System.currentTimeMillis());
 
-	@Autowired
-	protected MongoTemplate mongoTemplate;
+    @Autowired
+    protected MongoTemplate   mongoTemplate;
 
-	/*
-	 * Because AbstractTransactionalSpringContextTests is used, this method will
-	 * be called by Spring to set the JobRepository.
-	 */
+    /*
+     * Because AbstractTransactionalSpringContextTests is used, this method will be called by Spring to set the
+     * JobRepository.
+     */
 
-	@Autowired
-	public void setJobInstanceDao(JobInstanceDao jobInstanceDao) {
-		this.jobInstanceDao = jobInstanceDao;
-	}
+    @Autowired
+    public void setJobInstanceDao(JobInstanceDao jobInstanceDao) {
+        this.jobInstanceDao = jobInstanceDao;
+    }
 
-	@Autowired
-	public void setJobExecutionDao(JobExecutionDao jobExecutionDao) {
-		this.jobExecutionDao = jobExecutionDao;
-	}
+    @Autowired
+    public void setJobExecutionDao(JobExecutionDao jobExecutionDao) {
+        this.jobExecutionDao = jobExecutionDao;
+    }
 
-	@Before
-	public void onSetUpInTransaction() throws Exception {
-		mongoTemplate.getDb().dropDatabase();
-		// Create job.
-		jobInstance = jobInstanceDao.createJobInstance(jobName, jobParameters);
+    @Before
+    public void onSetUpInTransaction() throws Exception {
+        mongoTemplate.getDb().drop();
+        // Create job.
+        jobInstance = jobInstanceDao.createJobInstance(jobName, jobParameters);
 
-		// Create an execution
-		jobExecutionStartTime = new Date(System.currentTimeMillis());
+        // Create an execution
+        jobExecutionStartTime = new Date(System.currentTimeMillis());
 
-		jobExecution = new JobExecution(jobInstance, jobParameters);
-		jobExecution.setStartTime(jobExecutionStartTime);
-		jobExecution.setStatus(BatchStatus.STARTED);
-		jobExecutionDao.saveJobExecution(jobExecution);        
-        
-	}
+        jobExecution = new JobExecution(jobInstance, jobParameters);
+        jobExecution.setStartTime(jobExecutionStartTime);
+        jobExecution.setStatus(BatchStatus.STARTED);
+        jobExecutionDao.saveJobExecution(jobExecution);
 
-	@Test
-	public void testVersionIsNotNullForJob() throws Exception {
-		assertEquals(
-				0,
-				getVersion(JobInstance.class.getSimpleName(),
-						jobInstance.getId(),
-						MongoJobInstanceDao.JOB_INSTANCE_ID_KEY));
-	}
+    }
 
-	private int getVersion(String collectionName, Long id, String idKey) {
-		DBObject dbObject = mongoTemplate.getCollection(collectionName)
-				.findOne(new BasicDBObject(idKey, id),
-						new BasicDBObject(AbstractMongoDao.VERSION_KEY, 1));
-		return dbObject == null ? 0 : (Integer) dbObject
-				.get(AbstractMongoDao.VERSION_KEY);
-	}
+    @Test
+    public void testVersionIsNotNullForJob() throws Exception {
+        assertEquals(0, getVersion(JobInstance.class.getSimpleName(), jobInstance.getId(),
+                MongoJobInstanceDao.JOB_INSTANCE_ID_KEY));
+    }
 
-	@Test
-	public void testVersionIsNotNullForJobExecution() throws Exception {
-		assertEquals(
-				0,
-				getVersion(JobExecution.class.getSimpleName(),
-						jobExecution.getId(),
-						MongoExecutionContextDao.JOB_EXECUTION_ID_KEY));
-	}
+    private int getVersion(String collectionName, Long id, String idKey) {
+        Document dbObject = mongoTemplate.getCollection(collectionName)
+                .find(combine(eq(idKey, id), eq(AbstractMongoDao.VERSION_KEY, 1))).first();
+        return dbObject == null ? 0 : (Integer) dbObject.get(AbstractMongoDao.VERSION_KEY);
+    }
 
-	@Test
-	public void testFindNonExistentJob() {
-		// No job should be found since it hasn't been created.
-		JobInstance jobInstance = jobInstanceDao.getJobInstance(
-				"nonexistentJob", jobParameters);
-		assertNull(jobInstance);
-	}
+    @Test
+    public void testVersionIsNotNullForJobExecution() throws Exception {
+        assertEquals(0, getVersion(JobExecution.class.getSimpleName(), jobExecution.getId(),
+                MongoExecutionContextDao.JOB_EXECUTION_ID_KEY));
+    }
 
-	@Test
-	public void testFindJob() {
+    @Test
+    public void testFindNonExistentJob() {
+        // No job should be found since it hasn't been created.
+        JobInstance jobInstance = jobInstanceDao.getJobInstance("nonexistentJob", jobParameters);
+        assertNull(jobInstance);
+    }
 
-		JobInstance instance = jobInstanceDao.getJobInstance(jobName,
-				jobParameters);
-		assertNotNull(instance);
-		assertTrue(jobInstance.equals(instance));
+    @Test
+    public void testFindJob() {
 
-		assertEquals(jobParameters,
-				jobExecutionDao.getLastJobExecution(instance)
-						.getJobParameters());
-	}
+        JobInstance instance = jobInstanceDao.getJobInstance(jobName, jobParameters);
+        assertNotNull(instance);
+        assertTrue(jobInstance.equals(instance));
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testFindJobWithNullRuntime() {
-		jobInstanceDao.getJobInstance(null, null);
-	}
+        assertEquals(jobParameters, jobExecutionDao.getLastJobExecution(instance).getJobParameters());
+    }
 
-	/**
-	 * Test that ensures that if you create a job with a given name, then find a
-	 * job with the same name, but other pieces of the identifier different, you
-	 * get no result, not the existing one.
-	 */
-	@Test
-	public void testCreateJobWithExistingName() {
+    @Test(expected = IllegalArgumentException.class)
+    public void testFindJobWithNullRuntime() {
+        jobInstanceDao.getJobInstance(null, null);
+    }
 
-		String scheduledJob = "ScheduledJob";
-		jobInstanceDao.createJobInstance(scheduledJob, jobParameters);
+    /**
+     * Test that ensures that if you create a job with a given name, then find a job with the same name, but other
+     * pieces of the identifier different, you get no result, not the existing one.
+     */
+    @Test
+    public void testCreateJobWithExistingName() {
 
-		// Modifying the key should bring back a completely different
-		// JobInstance
-		JobParameters tempProps = new JobParametersBuilder().addString(
-				"job.key", "testKey1").toJobParameters();
+        String scheduledJob = "ScheduledJob";
+        jobInstanceDao.createJobInstance(scheduledJob, jobParameters);
 
-		JobInstance instance;
-		instance = jobInstanceDao.getJobInstance(scheduledJob, jobParameters);
-		assertNotNull(instance);
+        // Modifying the key should bring back a completely different
+        // JobInstance
+        JobParameters tempProps = new JobParametersBuilder().addString("job.key", "testKey1").toJobParameters();
 
-		//assertEquals(jobParameters, jobExecutionDao.getLastJobExecution(instance).getJobParameters());
+        JobInstance instance;
+        instance = jobInstanceDao.getJobInstance(scheduledJob, jobParameters);
+        assertNotNull(instance);
 
-		instance = jobInstanceDao.getJobInstance(scheduledJob, tempProps);
-		assertNull(instance);
+        // assertEquals(jobParameters, jobExecutionDao.getLastJobExecution(instance).getJobParameters());
 
-	}
+        instance = jobInstanceDao.getJobInstance(scheduledJob, tempProps);
+        assertNull(instance);
 
-	@Test
-	public void testUpdateJobExecution() {
+    }
 
-		jobExecution.setStatus(BatchStatus.COMPLETED);
-		jobExecution.setExitStatus(ExitStatus.COMPLETED);
-		jobExecution.setEndTime(new Date(System.currentTimeMillis()));
-		jobExecutionDao.updateJobExecution(jobExecution);
+    @Test
+    public void testUpdateJobExecution() {
 
-		List<JobExecution> executions = jobExecutionDao
-				.findJobExecutions(jobInstance);
-		assertEquals(executions.size(), 1);
-		validateJobExecution(jobExecution, executions.get(0));
+        jobExecution.setStatus(BatchStatus.COMPLETED);
+        jobExecution.setExitStatus(ExitStatus.COMPLETED);
+        jobExecution.setEndTime(new Date(System.currentTimeMillis()));
+        jobExecutionDao.updateJobExecution(jobExecution);
 
-	}
+        List<JobExecution> executions = jobExecutionDao.findJobExecutions(jobInstance);
+        assertEquals(executions.size(), 1);
+        validateJobExecution(jobExecution, executions.get(0));
 
-	@Test
-	public void testSaveJobExecution() {
+    }
 
-		List<JobExecution> executions = jobExecutionDao
-				.findJobExecutions(jobInstance);
-		assertEquals(executions.size(), 1);
-		validateJobExecution(jobExecution, executions.get(0));
-	}
+    @Test
+    public void testSaveJobExecution() {
 
-	@Test(expected = NoSuchObjectException.class)
-	public void testUpdateInvalidJobExecution() {
-		// id is invalid
-		JobExecution execution = new JobExecution(jobInstance, (long) 29432,
-				null, null);
-		execution.incrementVersion();
-		jobExecutionDao.updateJobExecution(execution);
-	}
+        List<JobExecution> executions = jobExecutionDao.findJobExecutions(jobInstance);
+        assertEquals(executions.size(), 1);
+        validateJobExecution(jobExecution, executions.get(0));
+    }
 
-	@Test(expected = IllegalArgumentException.class)
-	public void testUpdateNullIdJobExection() {
+    @Test(expected = NoSuchObjectException.class)
+    public void testUpdateInvalidJobExecution() {
+        // id is invalid
+        JobExecution execution = new JobExecution(jobInstance, (long) 29432, null, null);
+        execution.incrementVersion();
+        jobExecutionDao.updateJobExecution(execution);
+    }
 
-		JobExecution execution = new JobExecution(jobInstance, null);
-		jobExecutionDao.updateJobExecution(execution);
-	}
+    @Test(expected = IllegalArgumentException.class)
+    public void testUpdateNullIdJobExection() {
 
-	@Test
-	public void testJobWithSimpleJobIdentifier() throws Exception {
+        JobExecution execution = new JobExecution(jobInstance, null);
+        jobExecutionDao.updateJobExecution(execution);
+    }
 
-		String testJob = "test";
-		// Create job.
-		jobInstance = jobInstanceDao.createJobInstance(testJob, jobParameters);
-		DBObject dbObject = mongoTemplate.getCollection(
-				JobInstance.class.getSimpleName()).findOne(
-				new BasicDBObject(MongoJobInstanceDao.JOB_INSTANCE_ID_KEY,
-						jobInstance.getId()));
-		assertEquals("test", dbObject.get(MongoJobInstanceDao.JOB_NAME_KEY));
-	}
+    @Test
+    public void testJobWithSimpleJobIdentifier() throws Exception {
 
-	@Test
-	public void testJobWithDefaultJobIdentifier() throws Exception {
-		System.setProperty("DB.TRACE", "true");
-		String testDefaultJob = "testDefault";
-		// Create job.
-		jobInstance = jobInstanceDao.createJobInstance(testDefaultJob,
-				jobParameters);
+        String testJob = "test";
+        // Create job.
+        jobInstance = jobInstanceDao.createJobInstance(testJob, jobParameters);
+        Document dbObject = mongoTemplate.getCollection(JobInstance.class.getSimpleName())
+                .find(eq(MongoJobInstanceDao.JOB_INSTANCE_ID_KEY, jobInstance.getId())).first();
+        assertEquals("test", dbObject.get(MongoJobInstanceDao.JOB_NAME_KEY));
+    }
 
-		JobInstance instance = jobInstanceDao.getJobInstance(testDefaultJob,
-				jobParameters);
+    @Test
+    public void testJobWithDefaultJobIdentifier() throws Exception {
+        System.setProperty("DB.TRACE", "true");
+        String testDefaultJob = "testDefault";
+        // Create job.
+        jobInstance = jobInstanceDao.createJobInstance(testDefaultJob, jobParameters);
 
-		assertNotNull(instance);
-		DBCursor dbCursor = mongoTemplate.getCollection(
-				JobInstance.class.getSimpleName())
-				.find(
-						new BasicDBObject().append(
-								MongoJobInstanceDao.JOB_INSTANCE_ID_KEY,
-								instance.getId())).limit(1);
-		assertNotNull(dbCursor);
-		assertTrue(dbCursor.hasNext());
-		DBObject dbObject = dbCursor.next();
-		assertNotNull(dbObject);
-		DBObject jobParamObj = (DBObject)dbObject.get(MongoJobInstanceDao.JOB_PARAMETERS_KEY);
-		assertNotNull(jobParamObj);
-		String encodedKey = "job.key".replaceAll(
-				MongoJobInstanceDao.DOT_STRING,
-				MongoJobInstanceDao.DOT_ESCAPE_STRING);
-		assertNotNull(jobParamObj.get(encodedKey));
+        JobInstance instance = jobInstanceDao.getJobInstance(testDefaultJob, jobParameters);
 
-		assertEquals(jobParameters.getString("job.key"), jobParamObj
-				.get(encodedKey).toString());
+        assertNotNull(instance);
+        FindIterable<Document> findIter = mongoTemplate.getCollection(JobInstance.class.getSimpleName())
+                .find(new BasicDBObject().append(MongoJobInstanceDao.JOB_INSTANCE_ID_KEY, instance.getId())).limit(1);
+        MongoCursor<Document> dbCursor = findIter.iterator();
+        assertNotNull(dbCursor);
+        assertTrue(dbCursor.hasNext());
+        Document dbObject = dbCursor.next();
+        assertNotNull(dbObject);
+        DBObject jobParamObj = (DBObject) dbObject.get(MongoJobInstanceDao.JOB_PARAMETERS_KEY);
+        assertNotNull(jobParamObj);
+        String encodedKey = "job.key".replaceAll(MongoJobInstanceDao.DOT_STRING, MongoJobInstanceDao.DOT_ESCAPE_STRING);
+        assertNotNull(jobParamObj.get(encodedKey));
 
-	}
+        assertEquals(jobParameters.getString("job.key"), jobParamObj.get(encodedKey).toString());
 
-	@Test
-	public void testFindJobExecutions() {
+    }
 
-		List<JobExecution> results = jobExecutionDao
-				.findJobExecutions(jobInstance);
-		assertEquals(results.size(), 1);
-		validateJobExecution(jobExecution, results.get(0));
-	}
+    @Test
+    public void testFindJobExecutions() {
 
-	@Test
-	public void testFindJobsWithProperties() throws Exception {
+        List<JobExecution> results = jobExecutionDao.findJobExecutions(jobInstance);
+        assertEquals(results.size(), 1);
+        validateJobExecution(jobExecution, results.get(0));
+    }
 
-	}
+    @Test
+    public void testFindJobsWithProperties() throws Exception {
 
-	private void validateJobExecution(JobExecution lhs, JobExecution rhs) {
+    }
 
-		// equals operator only checks id
-		assertEquals(lhs, rhs);
-		assertEquals(lhs.getStartTime(), rhs.getStartTime());
-		assertEquals(lhs.getEndTime(), rhs.getEndTime());
-		assertEquals(lhs.getStatus(), rhs.getStatus());
-		assertEquals(lhs.getExitStatus(), rhs.getExitStatus());
-	}
+    private void validateJobExecution(JobExecution lhs, JobExecution rhs) {
 
-	@Test
-	public void testGetLastJobExecution() {
-		JobExecution lastExecution = new JobExecution(jobInstance, null);
-		lastExecution.setStatus(BatchStatus.STARTED);
+        // equals operator only checks id
+        assertEquals(lhs, rhs);
+        assertEquals(lhs.getStartTime(), rhs.getStartTime());
+        assertEquals(lhs.getEndTime(), rhs.getEndTime());
+        assertEquals(lhs.getStatus(), rhs.getStatus());
+        assertEquals(lhs.getExitStatus(), rhs.getExitStatus());
+    }
 
-		int JUMP_INTO_FUTURE = 1000; // makes sure start time is 'greatest'
-		lastExecution.setCreateTime(new Date(System.currentTimeMillis()
-				+ JUMP_INTO_FUTURE));
-		jobExecutionDao.saveJobExecution(lastExecution);
+    @Test
+    public void testGetLastJobExecution() {
+        JobExecution lastExecution = new JobExecution(jobInstance, null);
+        lastExecution.setStatus(BatchStatus.STARTED);
 
-		assertEquals(lastExecution,
-				jobExecutionDao.getLastJobExecution(jobInstance));
-	}
+        int JUMP_INTO_FUTURE = 1000; // makes sure start time is 'greatest'
+        lastExecution.setCreateTime(new Date(System.currentTimeMillis() + JUMP_INTO_FUTURE));
+        jobExecutionDao.saveJobExecution(lastExecution);
 
-	/**
-	 * Trying to create instance twice for the same job+parameters causes error
-	 */
-	@Test(expected = IllegalStateException.class)
-	public void testCreateDuplicateInstance() {
-		jobParameters = new JobParameters();
-		jobInstanceDao.createJobInstance(jobName, jobParameters);
-		jobInstanceDao.createJobInstance(jobName, jobParameters);
-	}
+        assertEquals(lastExecution, jobExecutionDao.getLastJobExecution(jobInstance));
+    }
 
-	@Test
-	public void testCreationAddsVersion() {
-		jobInstance = jobInstanceDao.createJobInstance(
-				"testCreationAddsVersion", new JobParameters());
-		assertNotNull(jobInstance.getVersion());
-	}
+    /**
+     * Trying to create instance twice for the same job+parameters causes error
+     */
+    @Test(expected = IllegalStateException.class)
+    public void testCreateDuplicateInstance() {
+        jobParameters = new JobParameters();
+        jobInstanceDao.createJobInstance(jobName, jobParameters);
+        jobInstanceDao.createJobInstance(jobName, jobParameters);
+    }
 
-	@Test
-	public void testSaveAddsVersionAndId() {
+    @Test
+    public void testCreationAddsVersion() {
+        jobInstance = jobInstanceDao.createJobInstance("testCreationAddsVersion", new JobParameters());
+        assertNotNull(jobInstance.getVersion());
+    }
 
-		JobExecution jobExecution = new JobExecution(jobInstance, null);
+    @Test
+    public void testSaveAddsVersionAndId() {
 
-		assertNull(jobExecution.getId());
-		assertNull(jobExecution.getVersion());
+        JobExecution jobExecution = new JobExecution(jobInstance, null);
 
-		jobExecutionDao.saveJobExecution(jobExecution);
+        assertNull(jobExecution.getId());
+        assertNull(jobExecution.getVersion());
 
-		assertNotNull(jobExecution.getId());
-		assertNotNull(jobExecution.getVersion());
-	}
+        jobExecutionDao.saveJobExecution(jobExecution);
 
-	@Test
-	public void testUpdateIncrementsVersion() {
-		int version = jobExecution.getVersion();
+        assertNotNull(jobExecution.getId());
+        assertNotNull(jobExecution.getVersion());
+    }
 
-		jobExecutionDao.updateJobExecution(jobExecution);
+    @Test
+    public void testUpdateIncrementsVersion() {
+        int version = jobExecution.getVersion();
 
-		assertEquals(version + 1, jobExecution.getVersion().intValue());
-	}
+        jobExecutionDao.updateJobExecution(jobExecution);
+
+        assertEquals(version + 1, jobExecution.getVersion().intValue());
+    }
 }
