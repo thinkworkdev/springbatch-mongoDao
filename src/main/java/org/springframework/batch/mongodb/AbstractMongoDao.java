@@ -15,6 +15,7 @@ import org.springframework.batch.core.JobParameters;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.FindOneAndUpdateOptions;
 
 /**
  * Parent class for all DAO used to store SpringBatch Infrastructure data to Mongo DB.
@@ -68,7 +69,7 @@ public abstract class AbstractMongoDao {
     protected Long getNextId(String name, MongoTemplate mongoTemplate) {
         MongoCollection<Document> collection = mongoTemplate.getDb().getCollection(SEQUENCES_COLLECTION_NAME);
         Bson sequence = eq("name", name);
-        collection.findOneAndUpdate(sequence, inc("value", 1L));
+        Document document = collection.findOneAndUpdate(sequence, inc("value", 1L), new FindOneAndUpdateOptions().upsert(true));
         return (Long) collection.find(sequence).first().get("value");
     }
 
