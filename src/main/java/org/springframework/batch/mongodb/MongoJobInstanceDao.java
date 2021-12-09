@@ -99,8 +99,11 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
     public JobInstance getJobInstance(JobExecution jobExecution) {
         Document instanceId = mongoTemplate.getCollection(JobExecution.class.getSimpleName())
                 .find(combine(jobExecutionIdObj(jobExecution.getId()), jobInstanceIdObj(1L))).first();
-        removeSystemFields(instanceId);
-        return mapJobInstance(getCollection().find(instanceId).first());
+        if (instanceId != null) {
+            removeSystemFields(instanceId);
+            return mapJobInstance(getCollection().find(instanceId).first());
+        } 
+        return null;
     }
 
     public List<JobInstance> getJobInstances(String jobName, int start, int count) {

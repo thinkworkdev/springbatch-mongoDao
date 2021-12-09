@@ -74,8 +74,10 @@ public abstract class AbstractMongoDao {
     }
 
     protected void removeSystemFields(Document dbObject) {
-        dbObject.remove(ID_KEY);
-        dbObject.remove(NS_KEY);
+        if (dbObject != null) {
+            dbObject.remove(ID_KEY);
+            dbObject.remove(NS_KEY);
+        }
     }
 
     protected Bson jobInstanceIdObj(Long id) {
