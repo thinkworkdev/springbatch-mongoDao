@@ -226,7 +226,7 @@ public class MongoJobInstanceDao extends AbstractMongoDao implements JobInstance
     }
 
     public long getLongJobInstanceCount(String jobName) {
-        long countLong = getCollection().count(new BasicDBObject(JOB_NAME_KEY, jobName));
+        long countLong = getCollection().countDocuments(new BasicDBObject(JOB_NAME_KEY, jobName));
         return countLong;
     }
 
