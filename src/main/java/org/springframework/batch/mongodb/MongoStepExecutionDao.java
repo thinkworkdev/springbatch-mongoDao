@@ -163,6 +163,9 @@ public class MongoStepExecutionDao extends AbstractMongoDao implements StepExecu
         StepExecution tempStepExecution = mapStepExecution(stepObject, null);
 
         JobExecution jobExecution = jobExecutionMap.get(tempStepExecution.getJobExecutionId());
+        if (jobExecution == null) {
+            return null;
+        }
 
         StepExecution finalStepExecution = mapStepExecution(stepObject, jobExecution);
 
